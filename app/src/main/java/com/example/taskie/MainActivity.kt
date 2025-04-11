@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -33,11 +35,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.example.taskie.data.LocationViewModel
 import com.example.taskie.data.SortOption
+import com.example.taskie.navigation.NavDestination
 import com.example.taskie.ui.AddLocationScreen
 import com.example.taskie.ui.LocationData
 import com.example.taskie.ui.MainScreen
+import com.example.taskie.ui.ProfileScreen
+import com.example.taskie.ui.components.TaskieBottomNavigation
 import com.example.taskie.ui.theme.TaskieTheme
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +83,9 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
     var isAddingLocation by remember { mutableStateOf(false) }
     var isEditingLocation by remember { mutableStateOf(false) }
     var currentEditLocation by remember { mutableStateOf<LocationData?>(null) }
+    
+    // Navigation controller for app navigation
+    val navController = rememberNavController()
     
     // Get the list of locations from ViewModel
     val locations by locationViewModel.locations.collectAsState()
@@ -145,7 +158,7 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
             }
         }
     } else {
-        // Show the main screen with locations
+        // Main app with bottom navigation
         Scaffold(
             topBar = {
                 TopAppBar(
@@ -163,18 +176,24 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
                     }
                 )
             },
+            bottomBar = {
+                TaskieBottomNavigation(navController = navController)
+            },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { isAddingLocation = true }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add Location"
-                    )
+                if (navController.currentBackStackEntryAsState().value?.destination?.route == NavDestination.Home.route) {
+                    FloatingActionButton(
+                        onClick = { isAddingLocation = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Location"
+                        )
+                    }
                 }
             }
         ) { innerPadding ->
-            MainScreen(
+            AppNavHost(
+                navController = navController,
                 paddingValues = innerPadding,
                 locations = locations,
                 onEditLocation = { location ->
@@ -189,7 +208,52 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
                 searchQuery = searchQuery,
                 onSearchQueryChange = locationViewModel::setSearchQuery,
                 sortOption = sortOption,
-                onSortOptionChange = locationViewModel::setSortOption
+                onSortOptionChange = locationViewModel::setSortOption,
+                visitedLocations = locations.filter { it.visited }
+            )
+        }
+    }
+}
+
+@Composable
+fun AppNavHost(
+    navController: NavHostController,
+    paddingValues: PaddingValues,
+    locations: List<LocationData>,
+    onEditLocation: (LocationData) -> Unit,
+    onDeleteLocation: (LocationData) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    sortOption: SortOption,
+    onSortOptionChange: (SortOption) -> Unit,
+    visitedLocations: List<LocationData>
+) {
+    NavHost(
+        navController = navController,
+        startDestination = NavDestination.Home.route,
+        // Remove default animations
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
+    ) {
+        composable(NavDestination.Home.route) {
+            MainScreen(
+                paddingValues = paddingValues,
+                locations = locations,
+                onEditLocation = onEditLocation,
+                onDeleteLocation = onDeleteLocation,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange,
+                sortOption = sortOption,
+                onSortOptionChange = onSortOptionChange
+            )
+        }
+        
+        composable(NavDestination.Profile.route) {
+            ProfileScreen(
+                paddingValues = paddingValues,
+                visitedLocations = visitedLocations
             )
         }
     }
@@ -199,6 +263,13 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
 @Composable
 fun HomeScreenPreview() {
     TaskieTheme {
-        MainScreen(PaddingValues(0.dp))
+        val navController = rememberNavController()
+        Scaffold(
+            bottomBar = {
+                TaskieBottomNavigation(navController = navController)
+            }
+        ) { innerPadding ->
+            MainScreen(paddingValues = innerPadding)
+        }
     }
 }

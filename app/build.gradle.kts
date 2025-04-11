@@ -51,6 +51,9 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
+    // Navigation Compose for app navigation
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
     // Room dependencies
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")

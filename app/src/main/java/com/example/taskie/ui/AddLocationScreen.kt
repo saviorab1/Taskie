@@ -2,6 +2,7 @@ package com.example.taskie.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -34,13 +36,16 @@ import com.example.taskie.ui.theme.TaskieTheme
 @Composable
 fun AddLocationScreen(
     paddingValues: PaddingValues,
+    initialLocationData: LocationData? = null,
     onLocationAdded: (LocationData) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var address by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(LocationCategory.LANDMARK) }
-    var selectedPriority by remember { mutableStateOf(PriorityLevel.MEDIUM) }
+    // Initialize form values with data if editing, or empty values if adding new
+    var name by remember { mutableStateOf(initialLocationData?.name ?: "") }
+    var address by remember { mutableStateOf(initialLocationData?.address ?: "") }
+    var description by remember { mutableStateOf(initialLocationData?.description ?: "") }
+    var selectedCategory by remember { mutableStateOf(initialLocationData?.category ?: LocationCategory.LANDMARK) }
+    var selectedPriority by remember { mutableStateOf(initialLocationData?.priority ?: PriorityLevel.MEDIUM) }
+    var visited by remember { mutableStateOf(initialLocationData?.visited ?: false) }
     var expandedCategoryMenu by remember { mutableStateOf(false) }
     var expandedPriorityMenu by remember { mutableStateOf(false) }
     
@@ -77,7 +82,7 @@ fun AddLocationScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Enter Location Details",
+                text = if (initialLocationData == null) "Enter Location Details" else "Edit Location",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 24.dp)
@@ -190,6 +195,26 @@ fun AddLocationScreen(
                     }
                 }
             }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Visited checkbox
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = visited,
+                    onCheckedChange = { visited = it }
+                )
+                Text(
+                    text = "Visited",
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -198,12 +223,13 @@ fun AddLocationScreen(
                     if (validateForm()) {
                         onLocationAdded(
                             LocationData(
-                                id = 0, // This will be assigned by MainActivity
+                                id = initialLocationData?.id ?: 0, // Use existing ID if editing
                                 name = name,
                                 address = address,
                                 description = description,
                                 category = selectedCategory,
-                                priority = selectedPriority
+                                priority = selectedPriority,
+                                visited = visited
                             )
                         )
                     }
@@ -211,7 +237,7 @@ fun AddLocationScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = name.isNotBlank() && address.isNotBlank()
             ) {
-                Text("Add Location")
+                Text(if (initialLocationData == null) "Add Location" else "Update Location")
             }
         }
     }

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -57,13 +58,7 @@ class MainActivity : ComponentActivity() {
                         showSplash = false
                     }
                 } else {
-                    // Get the list of locations from ViewModel
-                    val locations by locationViewModel.locations.collectAsState()
-                    HomeScreen(
-                        locations = locations,
-                        onAddLocation = { locationViewModel.addLocation(it) },
-                        onDeleteLocation = { locationViewModel.deleteLocation(it) }
-                    )
+                    TaskieApp(locationViewModel = locationViewModel)
                 }
             }
         }
@@ -72,12 +67,14 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(
-    locations: List<LocationData> = emptyList(),
-    onAddLocation: (LocationData) -> Unit = {},
-    onDeleteLocation: (LocationData) -> Unit = {}
-) {
+fun TaskieApp(locationViewModel: LocationViewModel) {
+    // States for screen navigation
     var isAddingLocation by remember { mutableStateOf(false) }
+    var isEditingLocation by remember { mutableStateOf(false) }
+    var currentEditLocation by remember { mutableStateOf<LocationData?>(null) }
+    
+    // Get the list of locations from ViewModel
+    val locations by locationViewModel.locations.collectAsState()
     
     if (isAddingLocation) {
         // Show the add location screen
@@ -100,10 +97,44 @@ fun HomeScreen(
                 paddingValues = innerPadding,
                 onLocationAdded = { newLocation ->
                     // Add new location using the provided callback
-                    onAddLocation(newLocation)
+                    locationViewModel.addLocation(newLocation)
                     isAddingLocation = false // Return to main screen after adding
                 }
             )
+        }
+    } else if (isEditingLocation && currentEditLocation != null) {
+        // Show the edit location screen
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Edit Location") },
+                    navigationIcon = {
+                        IconButton(onClick = { 
+                            isEditingLocation = false
+                            currentEditLocation = null
+                        }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Go Back"
+                            )
+                        }
+                    }
+                )
+            }
+        ) { innerPadding ->
+            // Use the same AddLocationScreen but initialize with the current location data
+            currentEditLocation?.let { locationData ->
+                AddLocationScreen(
+                    paddingValues = innerPadding,
+                    initialLocationData = locationData,
+                    onLocationAdded = { updatedLocation ->
+                        // Update the location
+                        locationViewModel.updateLocation(updatedLocation)
+                        isEditingLocation = false
+                        currentEditLocation = null
+                    }
+                )
+            }
         }
     } else {
         // Show the main screen with locations
@@ -137,7 +168,16 @@ fun HomeScreen(
         ) { innerPadding ->
             MainScreen(
                 paddingValues = innerPadding,
-                locations = locations
+                locations = locations,
+                onEditLocation = { location ->
+                    // Prepare for editing
+                    currentEditLocation = location
+                    isEditingLocation = true
+                },
+                onDeleteLocation = { location ->
+                    // Delete the location
+                    locationViewModel.deleteLocation(location)
+                }
             )
         }
     }
@@ -147,6 +187,6 @@ fun HomeScreen(
 @Composable
 fun HomeScreenPreview() {
     TaskieTheme {
-        HomeScreen()
+        MainScreen(PaddingValues(0.dp))
     }
 }

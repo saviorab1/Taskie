@@ -13,11 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Enum for sorting options
-enum class SortOption {
-    ALPHABETICAL, PRIORITY_HIGH_TO_LOW, PRIORITY_LOW_TO_HIGH, NAME_A_TO_Z, NAME_Z_TO_A
-}
-
 class LocationViewModel(application: Application) : AndroidViewModel(application) {
     
     private val repository: LocationRepository
@@ -26,12 +21,16 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     private val _locations = MutableStateFlow<List<LocationData>>(emptyList())
     val locations: StateFlow<List<LocationData>> = _locations.asStateFlow()
     
+    // StateFlow to expose unvisited locations to the UI
+    private val _unvisitedLocations = MutableStateFlow<List<LocationData>>(emptyList())
+    val unvisitedLocations: StateFlow<List<LocationData>> = _unvisitedLocations.asStateFlow()
+    
     // State for current search query
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     
     // State for current sort option
-    private val _sortOption = MutableStateFlow(SortOption.PRIORITY_HIGH_TO_LOW)
+    private val _sortOption = MutableStateFlow(SortOption.PRIORITY_HIGH)
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
     
     // Raw list of all locations before filtering or sorting
@@ -101,45 +100,34 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         
         // Apply sorting
         filteredList = when (_sortOption.value) {
-            SortOption.ALPHABETICAL, SortOption.NAME_A_TO_Z -> {
+            SortOption.NAME_ASC -> {
                 filteredList.sortedBy { it.name }
             }
-            SortOption.NAME_Z_TO_A -> {
+            SortOption.NAME_DESC -> {
                 filteredList.sortedByDescending { it.name }
             }
-            SortOption.PRIORITY_HIGH_TO_LOW -> {
-                filteredList.sortedWith(
-                    compareByDescending<LocationData> { 
-                        when (it.priority) {
-                            PriorityLevel.HIGH -> 3
-                            PriorityLevel.MEDIUM -> 2
-                            PriorityLevel.LOW -> 1
-                        }
-                    }.thenBy { it.name }
-                )
+            SortOption.PRIORITY_HIGH -> {
+                filteredList.sortedByDescending { it.priority }
             }
-            SortOption.PRIORITY_LOW_TO_HIGH -> {
-                filteredList.sortedWith(
-                    compareBy<LocationData> { 
-                        when (it.priority) {
-                            PriorityLevel.LOW -> 1
-                            PriorityLevel.MEDIUM -> 2
-                            PriorityLevel.HIGH -> 3
-                        }
-                    }.thenBy { it.name }
-                )
+            SortOption.PRIORITY_LOW -> {
+                filteredList.sortedBy { it.priority }
+            }
+            SortOption.CATEGORY -> {
+                filteredList.sortedBy { it.category.name }
             }
         }
         
         // Log sorting for debugging
         android.util.Log.d("Taskie", "Applied sort: ${_sortOption.value}, results: ${filteredList.size}")
         
+        // Update both lists
         _locations.value = filteredList
+        _unvisitedLocations.value = filteredList.filter { !it.visited }
     }
     
     // Function to get locations sorted by priority (legacy function)
     fun getLocationsSortedByPriority() {
-        setSortOption(SortOption.PRIORITY_HIGH_TO_LOW)
+        setSortOption(SortOption.PRIORITY_HIGH)
     }
     
     // Function to filter locations by category
@@ -179,9 +167,32 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     // Function to toggle the visited status
     fun toggleVisitedStatus(location: LocationData) {
         viewModelScope.launch {
-            repository.updateVisitedStatus(location.id, !location.visited)
+            val updatedLocation = location.copy(visited = !location.visited)
+            repository.updateLocation(updatedLocation)
             getAllLocations() // Refresh the list
         }
+    }
+    
+    // Function to clear all visited locations
+    fun clearAllVisitedLocations() {
+        viewModelScope.launch {
+            val updatedLocations = allLocations.map { location ->
+                if (location.visited) {
+                    location.copy(visited = false)
+                } else {
+                    location
+                }
+            }
+            updatedLocations.forEach { location ->
+                repository.updateLocation(location)
+            }
+            getAllLocations() // Refresh the list
+        }
+    }
+    
+    // Function to get only visited locations
+    fun getVisitedLocations(): List<LocationData> {
+        return allLocations.filter { it.visited }
     }
     
     // Factory for creating the ViewModel with correct dependencies

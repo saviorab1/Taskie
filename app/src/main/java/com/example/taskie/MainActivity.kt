@@ -47,6 +47,7 @@ import com.example.taskie.ui.AddLocationScreen
 import com.example.taskie.ui.LocationData
 import com.example.taskie.ui.MainScreen
 import com.example.taskie.ui.ProfileScreen
+import com.example.taskie.ui.VisitedScreen
 import com.example.taskie.ui.components.TaskieBottomNavigation
 import com.example.taskie.ui.theme.TaskieTheme
 
@@ -89,6 +90,7 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
     
     // Get the list of locations from ViewModel
     val locations by locationViewModel.locations.collectAsState()
+    val unvisitedLocations by locationViewModel.unvisitedLocations.collectAsState()
     val searchQuery by locationViewModel.searchQuery.collectAsState()
     val sortOption by locationViewModel.sortOption.collectAsState()
     
@@ -195,7 +197,7 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
             AppNavHost(
                 navController = navController,
                 paddingValues = innerPadding,
-                locations = locations,
+                locations = unvisitedLocations,
                 onEditLocation = { location ->
                     // Prepare for editing
                     currentEditLocation = location
@@ -205,11 +207,17 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
                     // Delete the location
                     locationViewModel.deleteLocation(location)
                 },
+                onToggleVisited = { location ->
+                    locationViewModel.toggleVisitedStatus(location)
+                },
                 searchQuery = searchQuery,
                 onSearchQueryChange = locationViewModel::setSearchQuery,
-                sortOption = sortOption,
+                sortOption = sortOption ?: SortOption.NAME_ASC,
                 onSortOptionChange = locationViewModel::setSortOption,
-                visitedLocations = locations.filter { it.visited }
+                visitedLocations = locations.filter { it.visited },
+                onClearVisitedLocations = {
+                    locationViewModel.clearAllVisitedLocations()
+                }
             )
         }
     }
@@ -222,11 +230,13 @@ fun AppNavHost(
     locations: List<LocationData>,
     onEditLocation: (LocationData) -> Unit,
     onDeleteLocation: (LocationData) -> Unit,
+    onToggleVisited: (LocationData) -> Unit,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     sortOption: SortOption,
     onSortOptionChange: (SortOption) -> Unit,
-    visitedLocations: List<LocationData>
+    visitedLocations: List<LocationData>,
+    onClearVisitedLocations: () -> Unit
 ) {
     NavHost(
         navController = navController,
@@ -243,6 +253,20 @@ fun AppNavHost(
                 locations = locations,
                 onEditLocation = onEditLocation,
                 onDeleteLocation = onDeleteLocation,
+                onToggleVisited = onToggleVisited,
+                searchQuery = searchQuery,
+                onSearchQueryChange = onSearchQueryChange,
+                sortOption = sortOption,
+                onSortOptionChange = onSortOptionChange
+            )
+        }
+        
+        composable(NavDestination.Visited.route) {
+            VisitedScreen(
+                paddingValues = paddingValues,
+                visitedLocations = visitedLocations,
+                onClearVisitedLocations = onClearVisitedLocations,
+                onToggleVisited = onToggleVisited,
                 searchQuery = searchQuery,
                 onSearchQueryChange = onSearchQueryChange,
                 sortOption = sortOption,
@@ -253,7 +277,8 @@ fun AppNavHost(
         composable(NavDestination.Profile.route) {
             ProfileScreen(
                 paddingValues = paddingValues,
-                visitedLocations = visitedLocations
+                visitedLocations = visitedLocations,
+                onClearVisitedLocations = onClearVisitedLocations
             )
         }
     }
@@ -269,7 +294,17 @@ fun HomeScreenPreview() {
                 TaskieBottomNavigation(navController = navController)
             }
         ) { innerPadding ->
-            MainScreen(paddingValues = innerPadding)
+            MainScreen(
+                paddingValues = innerPadding,
+                locations = emptyList(),
+                onEditLocation = {},
+                onDeleteLocation = {},
+                onToggleVisited = {},
+                searchQuery = "",
+                onSearchQueryChange = {},
+                sortOption = SortOption.NAME_ASC,
+                onSortOptionChange = {}
+            )
         }
     }
 }

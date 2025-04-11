@@ -86,7 +86,6 @@ fun AddLocationScreen(
     var description by remember { mutableStateOf(initialLocationData?.description ?: "") }
     var selectedCategory by remember { mutableStateOf(initialLocationData?.category ?: LocationCategory.LANDMARK) }
     var selectedPriority by remember { mutableStateOf(initialLocationData?.priority ?: PriorityLevel.MEDIUM) }
-    var visited by remember { mutableStateOf(initialLocationData?.visited ?: false) }
     var selectedImageResId by remember { mutableStateOf(initialLocationData?.imageResId ?: "") }
     var expandedCategoryMenu by remember { mutableStateOf(false) }
     var expandedPriorityMenu by remember { mutableStateOf(false) }
@@ -446,26 +445,6 @@ fun AddLocationScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Visited checkbox
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Checkbox(
-                    checked = visited,
-                    onCheckedChange = { visited = it }
-                )
-                Text(
-                    text = "Visited",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
-
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
@@ -479,7 +458,7 @@ fun AddLocationScreen(
                                 description = description,
                                 category = selectedCategory,
                                 priority = selectedPriority,
-                                visited = visited,
+                                visited = false, // Always set to false since we removed the checkbox
                                 imageResId = selectedImageResId
                             )
                         )

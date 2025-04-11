@@ -38,10 +38,12 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -51,8 +53,11 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    // Navigation Compose for app navigation
+    // Navigation Compose dependencies
     implementation("androidx.navigation:navigation-compose:2.7.7")
+    implementation("androidx.compose.runtime:runtime:1.6.1")
+    implementation("androidx.compose.runtime:runtime-livedata:1.6.1")
+    implementation("androidx.compose.foundation:foundation:1.6.1")
 
     // Room dependencies
     val roomVersion = "2.6.1"

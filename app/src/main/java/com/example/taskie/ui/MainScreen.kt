@@ -53,6 +53,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -106,15 +108,6 @@ enum class PriorityLevel {
     LOW, MEDIUM, HIGH
 }
 
-// Enum for sort options
-enum class SortOption {
-    PRIORITY_HIGH_TO_LOW,
-    PRIORITY_LOW_TO_HIGH,
-    ALPHABETICAL,
-    NAME_A_TO_Z,
-    NAME_Z_TO_A
-}
-
 // Extension function to get color based on priority
 @Composable
 fun PriorityLevel.getColor(): Color {
@@ -153,9 +146,10 @@ fun MainScreen(
     locations: List<LocationData> = emptyList(),
     onEditLocation: (LocationData) -> Unit = {},
     onDeleteLocation: (LocationData) -> Unit = {},
+    onToggleVisited: (LocationData) -> Unit = {},
     searchQuery: String = "",
     onSearchQueryChange: (String) -> Unit = {},
-    sortOption: SortOption = SortOption.PRIORITY_HIGH_TO_LOW,
+    sortOption: SortOption = SortOption.NAME_ASC,
     onSortOptionChange: (SortOption) -> Unit = {}
 ) {
     Column(
@@ -208,7 +202,8 @@ fun MainScreen(
                     locations = locations,
                     onLocationClick = { /* Handle location click */ },
                     onEditLocation = onEditLocation,
-                    onDeleteLocation = onDeleteLocation
+                    onDeleteLocation = onDeleteLocation,
+                    onToggleVisited = onToggleVisited
                 )
             }
         }
@@ -220,7 +215,8 @@ fun LocationRecyclerView(
     locations: List<LocationData>,
     onLocationClick: (LocationData) -> Unit,
     onEditLocation: (LocationData) -> Unit,
-    onDeleteLocation: (LocationData) -> Unit
+    onDeleteLocation: (LocationData) -> Unit,
+    onToggleVisited: (LocationData) -> Unit
 ) {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -237,16 +233,9 @@ fun LocationRecyclerView(
             SwipeableLocationCard(
                 location = location,
                 onClick = { onLocationClick(location) },
-                onSwipeToEdit = { 
-                    onEditLocation(location)
-                },
-                onSwipeToDelete = {
-                    scope.launch {
-                        // Small delay to allow swipe animation to complete
-                        delay(200)
-                        onDeleteLocation(location)
-                    }
-                }
+                onSwipeToEdit = { onEditLocation(location) },
+                onSwipeToDelete = { onDeleteLocation(location) },
+                onToggleVisited = { onToggleVisited(location) }
             )
         }
     }
@@ -258,7 +247,8 @@ fun SwipeableLocationCard(
     location: LocationData,
     onClick: () -> Unit,
     onSwipeToEdit: () -> Unit,
-    onSwipeToDelete: () -> Unit
+    onSwipeToDelete: () -> Unit,
+    onToggleVisited: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -534,21 +524,26 @@ fun SwipeableLocationCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 
-                // Visited badge if applicable
-                if (location.visited) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text(
-                            text = "Visited",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                // Visited button
+                Button(
+                    onClick = onToggleVisited,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (location.visited) 
+                            MaterialTheme.colorScheme.tertiaryContainer 
+                        else 
+                            MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        text = if (location.visited) "Mark as Unvisited" else "Mark as Visited",
+                        color = if (location.visited) 
+                            MaterialTheme.colorScheme.onTertiaryContainer 
+                        else 
+                            MaterialTheme.colorScheme.onPrimary
+                    )
                 }
                 
                 // Display swipe hint if needed
@@ -633,10 +628,11 @@ fun SearchAndSortBar(
                 ) {
                     Text(
                         text = when (currentSortOption) {
-                            SortOption.ALPHABETICAL, SortOption.NAME_A_TO_Z -> "Name (A-Z)"
-                            SortOption.NAME_Z_TO_A -> "Name (Z-A)"
-                            SortOption.PRIORITY_HIGH_TO_LOW -> "Priority (High to Low)"
-                            SortOption.PRIORITY_LOW_TO_HIGH -> "Priority (Low to High)"
+                            SortOption.NAME_ASC -> "Name (A-Z)"
+                            SortOption.NAME_DESC -> "Name (Z-A)"
+                            SortOption.PRIORITY_HIGH -> "Priority (High to Low)"
+                            SortOption.PRIORITY_LOW -> "Priority (Low to High)"
+                            SortOption.CATEGORY -> "Category"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
@@ -662,7 +658,7 @@ fun SearchAndSortBar(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = currentSortOption == SortOption.NAME_A_TO_Z || currentSortOption == SortOption.ALPHABETICAL,
+                                    selected = currentSortOption == SortOption.NAME_ASC,
                                     onClick = null
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -670,7 +666,7 @@ fun SearchAndSortBar(
                             }
                         },
                         onClick = {
-                            onSortOptionChange(SortOption.NAME_A_TO_Z)
+                            onSortOptionChange(SortOption.NAME_ASC)
                             showSortOptions = false
                         }
                     )
@@ -680,7 +676,7 @@ fun SearchAndSortBar(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = currentSortOption == SortOption.NAME_Z_TO_A,
+                                    selected = currentSortOption == SortOption.NAME_DESC,
                                     onClick = null
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -688,7 +684,7 @@ fun SearchAndSortBar(
                             }
                         },
                         onClick = {
-                            onSortOptionChange(SortOption.NAME_Z_TO_A)
+                            onSortOptionChange(SortOption.NAME_DESC)
                             showSortOptions = false
                         }
                     )
@@ -698,7 +694,7 @@ fun SearchAndSortBar(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = currentSortOption == SortOption.PRIORITY_HIGH_TO_LOW,
+                                    selected = currentSortOption == SortOption.PRIORITY_HIGH,
                                     onClick = null
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -706,7 +702,7 @@ fun SearchAndSortBar(
                             }
                         },
                         onClick = {
-                            onSortOptionChange(SortOption.PRIORITY_HIGH_TO_LOW)
+                            onSortOptionChange(SortOption.PRIORITY_HIGH)
                             showSortOptions = false
                         }
                     )
@@ -716,7 +712,7 @@ fun SearchAndSortBar(
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 RadioButton(
-                                    selected = currentSortOption == SortOption.PRIORITY_LOW_TO_HIGH,
+                                    selected = currentSortOption == SortOption.PRIORITY_LOW,
                                     onClick = null
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -724,7 +720,7 @@ fun SearchAndSortBar(
                             }
                         },
                         onClick = {
-                            onSortOptionChange(SortOption.PRIORITY_LOW_TO_HIGH)
+                            onSortOptionChange(SortOption.PRIORITY_LOW)
                             showSortOptions = false
                         }
                     )
@@ -763,7 +759,7 @@ fun HomeScreenPreview() {
                 )
             ),
             searchQuery = "",
-            sortOption = SortOption.PRIORITY_HIGH_TO_LOW
+            sortOption = SortOption.PRIORITY_HIGH
         )
     }
 }
@@ -775,7 +771,7 @@ fun SearchBarPreview() {
         SearchAndSortBar(
             searchQuery = "ha long",
             onSearchQueryChange = {},
-            currentSortOption = SortOption.NAME_A_TO_Z,
+            currentSortOption = SortOption.NAME_ASC,
             onSortOptionChange = {}
         )
     }

@@ -62,7 +62,8 @@ data class UserProfile(
 @Composable
 fun ProfileScreen(
     paddingValues: androidx.compose.foundation.layout.PaddingValues,
-    visitedLocations: List<LocationData> = emptyList()
+    visitedLocations: List<LocationData> = emptyList(),
+    onClearVisitedLocations: () -> Unit
 ) {
     // User profile state
     var userProfile by remember { mutableStateOf(UserProfile()) }
@@ -71,6 +72,7 @@ fun ProfileScreen(
     var showNameEditDialog by remember { mutableStateOf(false) }
     var showStudentIdEditDialog by remember { mutableStateOf(false) }
     var showHobbiesEditDialog by remember { mutableStateOf(false) }
+    var showClearConfirmationDialog by remember { mutableStateOf(false) }
     
     Column(
         modifier = Modifier
@@ -133,14 +135,27 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         // Visited places section
-        Text(
-            text = "Places Visited",
-            style = MaterialTheme.typography.titleLarge,
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
-            fontWeight = FontWeight.Bold
-        )
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Places Visited",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            
+            if (visitedLocations.isNotEmpty()) {
+                TextButton(
+                    onClick = { showClearConfirmationDialog = true }
+                ) {
+                    Text("Clear All")
+                }
+            }
+        }
         
         if (visitedLocations.isEmpty()) {
             Card(
@@ -164,7 +179,7 @@ fun ProfileScreen(
                 }
             }
         } else {
-            // List of visited places would go here
+            // List of visited places
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -209,6 +224,32 @@ fun ProfileScreen(
             onSave = { newValue ->
                 userProfile = userProfile.copy(hobbies = newValue)
                 showHobbiesEditDialog = false
+            }
+        )
+    }
+    
+    // Clear confirmation dialog
+    if (showClearConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmationDialog = false },
+            title = { Text("Clear Visited Places") },
+            text = { Text("Are you sure you want to clear all visited places? This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearVisitedLocations()
+                        showClearConfirmationDialog = false
+                    }
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showClearConfirmationDialog = false }
+                ) {
+                    Text("Cancel")
+                }
             }
         )
     }
@@ -362,6 +403,6 @@ fun ProfileScreenPreview() {
     TaskieTheme {
         ProfileScreen(
             paddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
-        )
+        ) { }
     }
 } 

@@ -31,10 +31,19 @@ sealed class NavDestination(
         selectedIcon = Icons.Filled.AccountCircle,
         unselectedIcon = Icons.Outlined.AccountCircle
     )
+
+    // Visited screen displaying visited locations
+    object Visited : NavDestination(
+        route = "visited",
+        title = "Visited",
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home
+    )
 }
 
 // List of all destinations for bottom navigation
 val bottomNavDestinations = listOf(
     NavDestination.Home,
+    NavDestination.Visited,
     NavDestination.Profile
 ) 

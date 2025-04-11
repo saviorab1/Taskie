@@ -1,6 +1,5 @@
 package com.example.taskie.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,12 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.taskie.R
 import com.example.taskie.ui.theme.TaskieTheme
 
 // Data class for location item
@@ -99,27 +96,34 @@ fun LocationCategory.getIcon() {
 }
 
 @Composable
-fun MainScreen(paddingValues: PaddingValues) {
-    // Sample data for demonstration
-    val locations = remember {
-        listOf(
-            LocationData(
-                id = 1,
-                name = "Fansipan Summit",
-                address = "Fansipan, Sapa",
-                description = "The highest mountain in Vietnam.",
-                category = LocationCategory.LANDMARK,
-                priority = PriorityLevel.HIGH
-            ),
-            LocationData(
-                id = 2,
-                name = "Cu Chi Tunnel",
-                address = "Cu Chi, Ho Chi Minh City",
-                description = "An immense network of connecting tunnels during Vietnam War.",
-                category = LocationCategory.LANDMARK,
-                priority = PriorityLevel.MEDIUM
+fun MainScreen(
+    paddingValues: PaddingValues,
+    locations: List<LocationData> = emptyList()
+) {
+    // Sample data for demonstration (only use if locations is empty)
+    val displayLocations = if (locations.isEmpty()) {
+        remember {
+            listOf(
+                LocationData(
+                    id = 1,
+                    name = "Fansipan Summit",
+                    address = "Fansipan, Sapa",
+                    description = "The highest mountain in Vietnam.",
+                    category = LocationCategory.LANDMARK,
+                    priority = PriorityLevel.HIGH
+                ),
+                LocationData(
+                    id = 2,
+                    name = "Cu Chi Tunnel",
+                    address = "Cu Chi, Ho Chi Minh City",
+                    description = "An immense network of connecting tunnels during Vietnam War.",
+                    category = LocationCategory.LANDMARK,
+                    priority = PriorityLevel.MEDIUM
+                )
             )
-        )
+        }
+    } else {
+        locations
     }
     
     Box(
@@ -127,10 +131,35 @@ fun MainScreen(paddingValues: PaddingValues) {
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        LocationRecyclerView(
-            locations = locations,
-            onLocationClick = { /* Handle location click */ }
-        )
+        if (displayLocations.isEmpty()) {
+            // Show empty state
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "No locations added yet",
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Press the + button to add your first location",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            // Location List
+            LocationRecyclerView(
+                locations = displayLocations,
+                onLocationClick = { /* Handle location click */ }
+            )
+        }
     }
 }
 
@@ -269,6 +298,17 @@ fun MainScreenPreview() {
 
 @Preview(showBackground = true)
 @Composable
+fun EmptyMainScreenPreview() {
+    TaskieTheme {
+        MainScreen(
+            paddingValues = PaddingValues(0.dp),
+            locations = emptyList()
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
 fun LocationCardPreview() {
     TaskieTheme {
         LocationCard(
@@ -283,4 +323,4 @@ fun LocationCardPreview() {
             onClick = {}
         )
     }
-} 
+}

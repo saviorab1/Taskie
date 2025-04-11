@@ -34,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.taskie.data.LocationViewModel
+import com.example.taskie.data.SortOption
 import com.example.taskie.ui.AddLocationScreen
 import com.example.taskie.ui.LocationData
 import com.example.taskie.ui.MainScreen
@@ -75,6 +76,13 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
     
     // Get the list of locations from ViewModel
     val locations by locationViewModel.locations.collectAsState()
+    val searchQuery by locationViewModel.searchQuery.collectAsState()
+    val sortOption by locationViewModel.sortOption.collectAsState()
+    
+    // Log whenever sort option changes for debugging
+    if (sortOption != null) {
+        android.util.Log.d("Taskie", "Current sort option: $sortOption")
+    }
     
     if (isAddingLocation) {
         // Show the add location screen
@@ -177,7 +185,11 @@ fun TaskieApp(locationViewModel: LocationViewModel) {
                 onDeleteLocation = { location ->
                     // Delete the location
                     locationViewModel.deleteLocation(location)
-                }
+                },
+                searchQuery = searchQuery,
+                onSearchQueryChange = locationViewModel::setSearchQuery,
+                sortOption = sortOption,
+                onSortOptionChange = locationViewModel::setSortOption
             )
         }
     }

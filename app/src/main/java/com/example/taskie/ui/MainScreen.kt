@@ -4,7 +4,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -29,19 +31,26 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -67,6 +76,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.taskie.data.SortOption
 import com.example.taskie.ui.theme.TaskieTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -94,6 +104,15 @@ enum class LocationCategory {
 // Enum for priority levels
 enum class PriorityLevel {
     LOW, MEDIUM, HIGH
+}
+
+// Enum for sort options
+enum class SortOption {
+    PRIORITY_HIGH_TO_LOW,
+    PRIORITY_LOW_TO_HIGH,
+    ALPHABETICAL,
+    NAME_A_TO_Z,
+    NAME_Z_TO_A
 }
 
 // Extension function to get color based on priority
@@ -133,43 +152,65 @@ fun MainScreen(
     paddingValues: PaddingValues,
     locations: List<LocationData> = emptyList(),
     onEditLocation: (LocationData) -> Unit = {},
-    onDeleteLocation: (LocationData) -> Unit = {}
+    onDeleteLocation: (LocationData) -> Unit = {},
+    searchQuery: String = "",
+    onSearchQueryChange: (String) -> Unit = {},
+    sortOption: SortOption = SortOption.PRIORITY_HIGH_TO_LOW,
+    onSortOptionChange: (SortOption) -> Unit = {}
 ) {
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        if (locations.isEmpty()) {
-            // Show empty state
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "No locations added yet",
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Press the + button to add your first location",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        // Search and Sort UI
+        SearchAndSortBar(
+            searchQuery = searchQuery,
+            onSearchQueryChange = onSearchQueryChange,
+            currentSortOption = sortOption,
+            onSortOptionChange = onSortOptionChange
+        )
+        
+        // Main content
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
+        ) {
+            if (locations.isEmpty()) {
+                // Show empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "No locations found",
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (searchQuery.isEmpty()) 
+                            "Press the + button to add your first location" 
+                        else 
+                            "Try a different search term",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                // Location List
+                LocationRecyclerView(
+                    locations = locations,
+                    onLocationClick = { /* Handle location click */ },
+                    onEditLocation = onEditLocation,
+                    onDeleteLocation = onDeleteLocation
                 )
             }
-        } else {
-            // Location List
-            LocationRecyclerView(
-                locations = locations,
-                onLocationClick = { /* Handle location click */ },
-                onEditLocation = onEditLocation,
-                onDeleteLocation = onDeleteLocation
-            )
         }
     }
 }
@@ -526,41 +567,216 @@ fun SwipeableLocationCard(
     }
 }
 
-@Preview(showBackground = true)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreenPreview() {
-    TaskieTheme {
-        MainScreen(PaddingValues(0.dp))
+fun SearchAndSortBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    currentSortOption: SortOption,
+    onSortOptionChange: (SortOption) -> Unit
+) {
+    var showSortOptions by remember { mutableStateOf(false) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        // Search bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            placeholder = { Text("Search locations...") },
+            modifier = Modifier.fillMaxWidth(),
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search"
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear search"
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(8.dp)
+        )
+        
+        // Sort options
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Sort by:",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            // Current sort option display
+            Box {
+                Row(
+                    modifier = Modifier
+                        .clickable { showSortOptions = !showSortOptions }
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = when (currentSortOption) {
+                            SortOption.ALPHABETICAL, SortOption.NAME_A_TO_Z -> "Name (A-Z)"
+                            SortOption.NAME_Z_TO_A -> "Name (Z-A)"
+                            SortOption.PRIORITY_HIGH_TO_LOW -> "Priority (High to Low)"
+                            SortOption.PRIORITY_LOW_TO_HIGH -> "Priority (Low to High)"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Spacer(modifier = Modifier.width(4.dp))
+                    
+                    Icon(
+                        imageVector = Icons.Default.Sort,
+                        contentDescription = "Sort options",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                // Dropdown menu for sort options
+                DropdownMenu(
+                    expanded = showSortOptions,
+                    onDismissRequest = { showSortOptions = false }
+                ) {
+                    // Name A-Z option
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = currentSortOption == SortOption.NAME_A_TO_Z || currentSortOption == SortOption.ALPHABETICAL,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Name (A-Z)")
+                            }
+                        },
+                        onClick = {
+                            onSortOptionChange(SortOption.NAME_A_TO_Z)
+                            showSortOptions = false
+                        }
+                    )
+                    
+                    // Name Z-A option
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = currentSortOption == SortOption.NAME_Z_TO_A,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Name (Z-A)")
+                            }
+                        },
+                        onClick = {
+                            onSortOptionChange(SortOption.NAME_Z_TO_A)
+                            showSortOptions = false
+                        }
+                    )
+                    
+                    // Priority High to Low option
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = currentSortOption == SortOption.PRIORITY_HIGH_TO_LOW,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Priority (High to Low)")
+                            }
+                        },
+                        onClick = {
+                            onSortOptionChange(SortOption.PRIORITY_HIGH_TO_LOW)
+                            showSortOptions = false
+                        }
+                    )
+                    
+                    // Priority Low to High option
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(
+                                    selected = currentSortOption == SortOption.PRIORITY_LOW_TO_HIGH,
+                                    onClick = null
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Priority (Low to High)")
+                            }
+                        },
+                        onClick = {
+                            onSortOptionChange(SortOption.PRIORITY_LOW_TO_HIGH)
+                            showSortOptions = false
+                        }
+                    )
+                }
+            }
+        }
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun EmptyMainScreenPreview() {
+fun HomeScreenPreview() {
     TaskieTheme {
         MainScreen(
             paddingValues = PaddingValues(0.dp),
-            locations = emptyList()
+            locations = listOf(
+                LocationData(
+                    id = 1,
+                    name = "Hoi An Ancient Town",
+                    address = "Quang Nam Province",
+                    description = "Well-preserved ancient town showing a unique blend of local and foreign influences.",
+                    category = LocationCategory.LANDMARK,
+                    priority = PriorityLevel.HIGH,
+                    visited = true,
+                    imageResId = "hoian"
+                ),
+                LocationData(
+                    id = 2,
+                    name = "Ha Long Bay",
+                    address = "Quang Ninh Province",
+                    description = "UNESCO World Heritage Site known for its emerald waters and limestone karsts.",
+                    category = LocationCategory.LANDMARK,
+                    priority = PriorityLevel.HIGH,
+                    visited = false,
+                    imageResId = "halong"
+                )
+            ),
+            searchQuery = "",
+            sortOption = SortOption.PRIORITY_HIGH_TO_LOW
         )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-fun LocationCardPreview() {
+fun SearchBarPreview() {
     TaskieTheme {
-        SwipeableLocationCard(
-            location = LocationData(
-                id = 1,
-                name = "Eiffel Tower",
-                address = "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France",
-                description = "The Eiffel Tower is a wrought-iron lattice tower on the Champ de Mars in Paris, France.",
-                category = LocationCategory.LANDMARK,
-                priority = PriorityLevel.HIGH
-            ),
-            onClick = {},
-            onSwipeToEdit = {},
-            onSwipeToDelete = {}
+        SearchAndSortBar(
+            searchQuery = "ha long",
+            onSearchQueryChange = {},
+            currentSortOption = SortOption.NAME_A_TO_Z,
+            onSortOptionChange = {}
         )
     }
 }

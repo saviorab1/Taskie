@@ -25,6 +25,18 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
         val locationDao = database.locationDao()
         repository = LocationRepository(locationDao)
         
+        // Force insert sample data in case the database is empty
+        viewModelScope.launch {
+            val count = repository.getLocationsCount()
+            android.util.Log.d("Taskie", "Current location count: $count")
+            
+            if (count == 0) {
+                android.util.Log.d("Taskie", "Database is empty, loading sample data...")
+                val sampleData = LocationDataSource.getSampleData()
+                repository.insertLocations(sampleData)
+            }
+        }
+        
         // Load locations when ViewModel is created
         getAllLocations()
     }
@@ -32,7 +44,12 @@ class LocationViewModel(application: Application) : AndroidViewModel(application
     // Function to get all locations and update the StateFlow
     fun getAllLocations() {
         viewModelScope.launch {
+            android.util.Log.d("Taskie", "Loading all locations...")
             repository.getAllLocations().collect { locationsList ->
+                android.util.Log.d("Taskie", "Loaded ${locationsList.size} locations")
+                for (location in locationsList) {
+                    android.util.Log.d("Taskie", "Location: ${location.name}, Image: ${location.imageResId}")
+                }
                 _locations.value = locationsList
             }
         }

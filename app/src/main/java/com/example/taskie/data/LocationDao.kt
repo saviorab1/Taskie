@@ -46,4 +46,10 @@ interface LocationDao {
     
     @Query("UPDATE locations SET visited = :visited WHERE id = :id")
     suspend fun updateVisitedStatus(id: Int, visited: Boolean)
+    
+    @Query("SELECT EXISTS(SELECT 1 FROM locations LIMIT 1)")
+    suspend fun hasAnyLocations(): Boolean
+
+    @Query("SELECT COUNT(*) FROM locations")
+    suspend fun getLocationsCount(): Int
 } 

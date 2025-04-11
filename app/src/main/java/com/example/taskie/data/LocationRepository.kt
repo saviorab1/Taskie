@@ -63,6 +63,11 @@ class LocationRepository(private val locationDao: LocationDao) {
         return locationDao.getLocationById(id)?.toDomainModel()
     }
     
+    // Get location count
+    suspend fun getLocationsCount(): Int {
+        return locationDao.getLocationsCount()
+    }
+    
     // Update visited status
     suspend fun updateVisitedStatus(id: Int, visited: Boolean) {
         locationDao.updateVisitedStatus(id, visited)

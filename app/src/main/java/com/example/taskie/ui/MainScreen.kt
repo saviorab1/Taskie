@@ -57,8 +57,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -79,7 +82,8 @@ data class LocationData(
     val description: String,
     val category: LocationCategory,
     val priority: PriorityLevel,
-    val visited: Boolean = false
+    val visited: Boolean = false,
+    val imageResId: String = "" // Image resource ID for location photo
 )
 
 // Enum for location categories
@@ -216,6 +220,35 @@ fun SwipeableLocationCard(
     onSwipeToDelete: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    
+    // Get the resource ID for the image
+    val imageResId = remember(location) {
+        if (location.imageResId.isNotEmpty()) {
+            val resourceId = context.resources.getIdentifier(
+                location.imageResId,
+                "drawable",
+                context.packageName
+            )
+            // If the resource isn't found, log the issue
+            if (resourceId == 0) {
+                android.util.Log.e("Taskie", "Resource not found: ${location.imageResId}")
+                android.util.Log.e("Taskie", "Available resources: " + 
+                    context.resources.getIdentifier("phongnha", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("muine", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("hoian", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("benthanh", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("halong", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("hoankiem", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("cuchi", "drawable", context.packageName) + ", " +
+                    context.resources.getIdentifier("fansipan", "drawable", context.packageName)
+                )
+            }
+            resourceId
+        } else {
+            0
+        }
+    }
     
     // For horizontal dragging
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -373,6 +406,24 @@ fun SwipeableLocationCard(
             Column(
                 modifier = Modifier.padding(16.dp)
             ) {
+                // Display location image if available
+                if (imageResId != 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(150.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    ) {
+                        androidx.compose.foundation.Image(
+                            painter = painterResource(id = imageResId),
+                            contentDescription = "Location Image: ${location.name}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+                
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {

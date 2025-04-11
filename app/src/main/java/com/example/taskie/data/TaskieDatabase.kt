@@ -10,7 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-@Database(entities = [LocationEntity::class], version = 1, exportSchema = false)
+@Database(entities = [LocationEntity::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class TaskieDatabase : RoomDatabase() {
     
@@ -43,6 +43,33 @@ abstract class TaskieDatabase : RoomDatabase() {
                 INSTANCE?.let { database ->
                     CoroutineScope(Dispatchers.IO).launch {
                         populateDatabase(database.locationDao())
+                    }
+                }
+            }
+            
+            // Also populate on migration to ensure we have data
+            override fun onDestructiveMigration(db: SupportSQLiteDatabase) {
+                super.onDestructiveMigration(db)
+                
+                INSTANCE?.let { database ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        populateDatabase(database.locationDao())
+                    }
+                }
+            }
+            
+            // Also repopulate if the database is opened (existing installation)
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                
+                // Check if there's data, if not, add sample data
+                INSTANCE?.let { database ->
+                    CoroutineScope(Dispatchers.IO).launch {
+                        val locationDao = database.locationDao()
+                        // Only populate if empty
+                        if (!locationDao.hasAnyLocations()) {
+                            populateDatabase(locationDao)
+                        }
                     }
                 }
             }

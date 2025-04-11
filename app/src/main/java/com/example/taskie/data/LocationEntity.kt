@@ -17,7 +17,8 @@ data class LocationEntity(
     val description: String,
     val category: LocationCategory,
     val priority: PriorityLevel,
-    val visited: Boolean = false
+    val visited: Boolean = false,
+    val imageResId: String = ""
 )
 
 // Extension functions to convert between domain and entity models
@@ -29,7 +30,8 @@ fun LocationEntity.toDomainModel(): LocationData {
         description = description,
         category = category,
         priority = priority,
-        visited = visited
+        visited = visited,
+        imageResId = imageResId
     )
 }
 
@@ -41,7 +43,8 @@ fun LocationData.toEntity(): LocationEntity {
         description = description,
         category = category,
         priority = priority,
-        visited = visited
+        visited = visited,
+        imageResId = imageResId
     )
 }
 

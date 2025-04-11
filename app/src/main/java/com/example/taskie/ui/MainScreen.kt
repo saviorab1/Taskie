@@ -100,38 +100,12 @@ fun MainScreen(
     paddingValues: PaddingValues,
     locations: List<LocationData> = emptyList()
 ) {
-    // Sample data for demonstration (only use if locations is empty)
-    val displayLocations = if (locations.isEmpty()) {
-        remember {
-            listOf(
-                LocationData(
-                    id = 1,
-                    name = "Fansipan Summit",
-                    address = "Fansipan, Sapa",
-                    description = "The highest mountain in Vietnam.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.HIGH
-                ),
-                LocationData(
-                    id = 2,
-                    name = "Cu Chi Tunnel",
-                    address = "Cu Chi, Ho Chi Minh City",
-                    description = "An immense network of connecting tunnels during Vietnam War.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.MEDIUM
-                )
-            )
-        }
-    } else {
-        locations
-    }
-    
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        if (displayLocations.isEmpty()) {
+        if (locations.isEmpty()) {
             // Show empty state
             Column(
                 modifier = Modifier
@@ -156,7 +130,7 @@ fun MainScreen(
         } else {
             // Location List
             LocationRecyclerView(
-                locations = displayLocations,
+                locations = locations,
                 onLocationClick = { /* Handle location click */ }
             )
         }

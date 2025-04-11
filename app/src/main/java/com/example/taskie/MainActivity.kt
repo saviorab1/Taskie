@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,7 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -21,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,15 +32,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.taskie.SplashScreen
+import com.example.taskie.data.LocationViewModel
 import com.example.taskie.ui.AddLocationScreen
-import com.example.taskie.ui.LocationCategory
 import com.example.taskie.ui.LocationData
 import com.example.taskie.ui.MainScreen
-import com.example.taskie.ui.PriorityLevel
 import com.example.taskie.ui.theme.TaskieTheme
 
 class MainActivity : ComponentActivity() {
+    // Initialize ViewModel with factory
+    private val locationViewModel: LocationViewModel by viewModels { 
+        LocationViewModel.Factory(application) 
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -52,7 +57,13 @@ class MainActivity : ComponentActivity() {
                         showSplash = false
                     }
                 } else {
-                    HomeScreen()
+                    // Get the list of locations from ViewModel
+                    val locations by locationViewModel.locations.collectAsState()
+                    HomeScreen(
+                        locations = locations,
+                        onAddLocation = { locationViewModel.addLocation(it) },
+                        onDeleteLocation = { locationViewModel.deleteLocation(it) }
+                    )
                 }
             }
         }
@@ -61,32 +72,12 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    locations: List<LocationData> = emptyList(),
+    onAddLocation: (LocationData) -> Unit = {},
+    onDeleteLocation: (LocationData) -> Unit = {}
+) {
     var isAddingLocation by remember { mutableStateOf(false) }
-    
-    // Sample initial data for demonstration
-    var locations by remember { 
-        mutableStateOf(
-            listOf(
-                LocationData(
-                    id = 1,
-                    name = "Fansipan Summit",
-                    address = "Fansipan, Sapa",
-                    description = "The highest mountain in Vietnam.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.HIGH
-                ),
-                LocationData(
-                    id = 2,
-                    name = "Cu Chi Tunnel",
-                    address = "Cu Chi, Ho Chi Minh City",
-                    description = "An immense network of connecting tunnels during Vietnam War.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.MEDIUM
-                )
-            )
-        ) 
-    }
     
     if (isAddingLocation) {
         // Show the add location screen
@@ -97,7 +88,7 @@ fun HomeScreen() {
                     navigationIcon = {
                         IconButton(onClick = { isAddingLocation = false }) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Go Back"
                             )
                         }
@@ -108,12 +99,8 @@ fun HomeScreen() {
             AddLocationScreen(
                 paddingValues = innerPadding,
                 onLocationAdded = { newLocation ->
-                    // Generate a simple ID for the new location
-                    val maxId = locations.maxByOrNull { it.id }?.id ?: 0
-                    val locationWithId = newLocation.copy(id = maxId + 1)
-                    
-                    // Add the new location to the list
-                    locations = locations + locationWithId
+                    // Add new location using the provided callback
+                    onAddLocation(newLocation)
                     isAddingLocation = false // Return to main screen after adding
                 }
             )

@@ -504,10 +504,10 @@ fun SwipeableLocationCard(
                                 contentDescription = "Medium Priority",
                                 tint = Color.White
                             )
-                            else -> Text(
-                                text = "L",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
+                            PriorityLevel.LOW -> Icon(
+                                imageVector = Icons.Outlined.Star,
+                                contentDescription = "Low Priority",
+                                tint = Color.White
                             )
                         }
                     }
@@ -736,30 +736,14 @@ fun HomeScreenPreview() {
     TaskieTheme {
         MainScreen(
             paddingValues = PaddingValues(0.dp),
-            locations = listOf(
-                LocationData(
-                    id = 1,
-                    name = "Hoi An Ancient Town",
-                    address = "Quang Nam Province",
-                    description = "Well-preserved ancient town showing a unique blend of local and foreign influences.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.HIGH,
-                    visited = true,
-                    imageResId = "hoian"
-                ),
-                LocationData(
-                    id = 2,
-                    name = "Ha Long Bay",
-                    address = "Quang Ninh Province",
-                    description = "UNESCO World Heritage Site known for its emerald waters and limestone karsts.",
-                    category = LocationCategory.LANDMARK,
-                    priority = PriorityLevel.HIGH,
-                    visited = false,
-                    imageResId = "halong"
-                )
-            ),
+            locations = emptyList(),
+            onEditLocation = {},
+            onDeleteLocation = {},
+            onToggleVisited = {},
             searchQuery = "",
-            sortOption = SortOption.PRIORITY_HIGH
+            onSearchQueryChange = {},
+            sortOption = SortOption.NAME_ASC,
+            onSortOptionChange = {}
         )
     }
 }
@@ -769,7 +753,7 @@ fun HomeScreenPreview() {
 fun SearchBarPreview() {
     TaskieTheme {
         SearchAndSortBar(
-            searchQuery = "ha long",
+            searchQuery = "",
             onSearchQueryChange = {},
             currentSortOption = SortOption.NAME_ASC,
             onSortOptionChange = {}
